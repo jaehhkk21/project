@@ -1,4 +1,4 @@
-import {rankStocks,validateSnapshot,eligible} from './ranking.js';
+import {rankStocks,validateSnapshot,eligible} from './ranking.js?v=2';
 const $=s=>document.querySelector(s);
 let market='ALL',watchOnly=false,watch=new Set(),snapshot=null,busy=false,dirty=false;
 try{const saved=JSON.parse(localStorage.getItem('stock-lens-watch')||'[]');if(Array.isArray(saved))watch=new Set(saved.filter(s=>typeof s==='string'));}catch{}

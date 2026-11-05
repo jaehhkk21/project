@@ -46,3 +46,30 @@ jobs:
       - name: Deploy refreshed site
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify published real-data recommendations
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          python - <<'PYVERIFY'
+          import json, os, time, urllib.request
+          from datetime import datetime, timezone
+          base = os.environ['PAGE_URL'].rstrip('/') + '/stocks/'
+          for attempt in range(6):
+              try:
+                  with urllib.request.urlopen(base + 'data/market.json?t=' + str(time.time()), timeout=30) as response:
+                      data = json.load(response)
+                  assert data['status'] == 'ready' and len(data['stocks']) > 4000
+                  assert data['quality']['KR']['eligible'] > 0 and data['quality']['US']['eligible'] > 0
+                  assert (datetime.now(timezone.utc) - datetime.fromisoformat(data['collectedAt'])).total_seconds() < 3600
+                  for path, marker in [('index.html', 'id="recommend"'), ('app.js?v=2', 'validateSnapshot')]:
+                      with urllib.request.urlopen(base + path, timeout=30) as response:
+                          assert marker in response.read().decode()
+                  print('Published site verified:', len(data['stocks']), 'real stocks', data['quality'])
+                  with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+                      out.write('\nPublished HTML, recommendation code, and fresh real-data JSON verified by HTTP requests.\n')
+                  break
+              except Exception:
+                  if attempt == 5:
+                      raise
+                  time.sleep(10)
+          PYVERIFY

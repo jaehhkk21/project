@@ -97,8 +97,23 @@ def main():
         count = sum(r['market'] == market for r in rows.values())
         if count < (1000 if market == 'KR' else 3000):
             raise RuntimeError(f'{market}: unexpected small universe ({count}); do not replace snapshot')
+    now = time.time()
+    quality = {}
+    for market in EXCHANGES:
+        selected = [row for row in rows.values() if row['market'] == market]
+        complete = [row for row in selected if all(number(row.get(k)) is not None for k in ('price', 'pe', 'low52', 'high52', 'volume', 'priceTime')) and row['price'] > 0 and row['pe'] > 0 and row['volume'] > 0 and row['low52'] > 0 and row['high52'] > row['low52'] and now - 7 * 86400 <= row['priceTime'] <= now + 300]
+        quality[market] = {'collected': len(selected), 'eligible': len(complete)}
+        if not complete:
+            raise RuntimeError(f'{market}: no stocks with valid recommendation metrics; refusing to publish')
+    summary = os.environ.get('GITHUB_STEP_SUMMARY')
+    if summary:
+        with open(summary, 'a') as handle:
+            handle.write('## Real market snapshot\n\n| Market | Collected equities | Rankable equities |\n|---|---:|---:|\n')
+            for market, counts in quality.items():
+                handle.write(f"| {market} | {counts['collected']} | {counts['eligible']} |\n")
+            handle.write('\nEvery provider-reported exchange page was collected. The universe is provider-defined, not independently reconciled to official listing rosters.\n')
     snapshot = {'schemaVersion': 1, 'status': 'ready', 'collectedAt': datetime.now(timezone.utc).isoformat(),
-                'source': 'Yahoo Finance screener via yfinance', 'coverage': coverage,
+                'source': 'Yahoo Finance screener via yfinance', 'coverage': coverage, 'quality': quality,
                 'scope': 'Yahoo Finance 한국·미국 거래소 스크리너에 등록된 주식. ETF·펀드 제외. 거래소 공식 전체 상장 목록과 대조하지 않았으므로 모든 상장 종목 포함을 보장하지 않습니다.',
                 'stocks': sorted(rows.values(), key=lambda r: (r['market'], r['symbol']))}
     dest = Path(os.environ.get('SNAPSHOT_PATH', 'stocks/data/market.json'))
