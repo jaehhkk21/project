@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {rankStocks,eligible,validateSnapshot} from './ranking.js';
+const now=Date.UTC(2026,0,10),row={name:'Alpha',symbol:'A',market:'US',sector:'Tech',price:90,pe:10,low52:10,high52:110,volume:100,priceTime:now/1000};
+test('missing, loss-making and stale records cannot be recommended',()=>{for(const patch of [{pe:null},{pe:-1},{volume:0},{high52:10},{priceTime:now/1000-8*86400}])assert.equal(eligible({...row,...patch},now),false);assert.equal(rankStocks([{...row,pe:null}],{now}).length,0);});
+test('ranks complete universe then combines market, sector, name filters',()=>{const rows=[row,{...row,name:'Beta',symbol:'B',market:'KR',pe:30,volume:200}];assert.equal(rankStocks(rows,{now,market:'KR',sector:'Tech',query:'beta'})[0].symbol,'B');assert.equal(rankStocks(rows,{now,query:'absent'}).length,0);assert.equal(rows[0].score,undefined);});
+test('weights are deterministic and do not depend on search filter',()=>{const rows=[row,{...row,symbol:'B',pe:100,price:105,volume:200}];const all=rankStocks(rows,{now});assert.equal(rankStocks(rows,{now,query:'A'}).find(s=>s.symbol==='A').score,all.find(s=>s.symbol==='A').score);for(const style of ['value','trend','balanced'])assert.ok(rankStocks(rows,{now,style}).every(s=>s.score>=0&&s.score<=100));});
+test('rejects pending, stale, truncated and duplicate snapshots',()=>{const data={schemaVersion:1,status:'ready',collectedAt:new Date(now).toISOString(),coverage:[{reported:1,received:1}],stocks:[row]};assert.equal(validateSnapshot(data,now),data);for(const patch of [{status:'pending'},{collectedAt:'2020-01-01'},{coverage:[{reported:2,received:1}]},{stocks:[row,row]}])assert.throws(()=>validateSnapshot({...data,...patch},now));});

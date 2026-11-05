@@ -1,0 +1,48 @@
+name: Refresh stock universe and deploy Pages
+on:
+  push:
+    branches: [main]
+    paths: ['stocks/**', '.github/workflows/stock-data.yml']
+  schedule:
+    - cron: '35 22 * * 1-5'
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: stock-pages
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install verified-registry dependencies
+        run: python -m pip install yfinance==0.2.66
+      - name: Test collection and recommendation rules
+        run: |
+          python -m unittest discover -s stocks/scripts -p 'test_*.py'
+          node --test stocks/ranking.test.js
+      - name: Collect full provider universe (no sample fallback)
+        run: python stocks/scripts/collect.py
+      - name: Prepare only public site files
+        run: |
+          mkdir -p _site/stocks/data
+          cp index.html style.css app.js lottery.js _site/
+          cp stocks/index.html stocks/style.css stocks/app.js stocks/ranking.js _site/stocks/
+          cp stocks/data/market.json _site/stocks/data/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Deploy refreshed site
+        id: deployment
+        uses: actions/deploy-pages@v4

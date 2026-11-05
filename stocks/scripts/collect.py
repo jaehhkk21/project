@@ -1,0 +1,106 @@
+"""Fetch the complete Yahoo screener result for each configured exchange.
+No API keys or fabricated fallback. Publish only a complete snapshot.
+"""
+import json
+import math
+import os
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+EXCHANGES = {'KR': ['KSC', 'KOE'], 'US': ['ASE', 'BTS', 'CXI', 'NAE', 'NCM', 'NGM', 'NMS', 'NYQ', 'OEM', 'OQB', 'OQX', 'PCX', 'PNK', 'YHD']}
+
+
+def number(value):
+    if isinstance(value, dict):
+        value = value.get('raw')
+    return value if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) else None
+
+
+def normalize(q, market):
+    symbol = q.get('symbol')
+    if not symbol or q.get('quoteType', 'EQUITY') != 'EQUITY':
+        return None
+    price = number(q.get('regularMarketPrice'))
+    eps = number(q.get('epsTrailingTwelveMonths'))
+    pe = number(q.get('trailingPE'))
+    if pe is None and price is not None and eps and eps > 0:
+        pe = price / eps
+    return {'symbol': symbol, 'name': q.get('longName') or q.get('shortName') or symbol,
+            'market': market, 'exchange': q.get('exchange', ''),
+            'sector': q.get('sector') or q.get('sectorDisp') or '미제공',
+            'price': price, 'currency': q.get('currency'), 'pe': pe,
+            'low52': number(q.get('fiftyTwoWeekLow')), 'high52': number(q.get('fiftyTwoWeekHigh')),
+            'volume': number(q.get('averageDailyVolume3Month')),
+            'priceTime': number(q.get('regularMarketTime')),
+            'sourceUrl': 'https://finance.yahoo.com/quote/' + symbol + '/'}
+
+
+def collect_exchange(screen, query_class, market, exchange, pause=time.sleep):
+    query = query_class('and', [query_class('eq', ['region', market.lower()]), query_class('eq', ['exchange', exchange])])
+    offset, total, quotes, seen = 0, None, [], set()
+    while total is None or offset < total:
+        response = None
+        for attempt in range(3):
+            try:
+                response = screen(query, offset=offset, size=250, sortField='ticker', sortAsc=True)
+                if not isinstance(response, dict) or not isinstance(response.get('quotes'), list):
+                    raise RuntimeError('Malformed provider response')
+                break
+            except Exception:
+                if attempt == 2:
+                    raise
+                pause(5 * (attempt + 1))
+        current_total = response.get('total')
+        if not isinstance(current_total, int) or current_total < 0:
+            raise RuntimeError(f'{exchange}: missing total')
+        if total is not None and current_total != total:
+            raise RuntimeError(f'{exchange}: universe changed during pagination; retry collection')
+        total = current_total
+        page = response['quotes']
+        if not page and offset < total:
+            raise RuntimeError(f'{exchange}: truncated response at {offset}/{total}')
+        for q in page:
+            key = q.get('symbol')
+            if not key or key in seen:
+                raise RuntimeError(f'{exchange}: missing or duplicate symbol; pagination incomplete')
+            seen.add(key)
+        quotes.extend(page)
+        offset += len(page)
+        if len(quotes) > total:
+            raise RuntimeError(f'{exchange}: invalid pagination count')
+        if offset < total:
+            pause(1)
+    return quotes, total
+
+
+def main():
+    import yfinance as yf
+    rows, coverage = {}, []
+    for market, exchanges in EXCHANGES.items():
+        for exchange in exchanges:
+            quotes, total = collect_exchange(yf.screen, yf.EquityQuery, market, exchange)
+            for q in quotes:
+                row = normalize(q, market)
+                if row:
+                    rows[(market, row['symbol'])] = row
+            coverage.append({'market': market, 'exchange': exchange, 'reported': total, 'received': len(quotes)})
+            print(f'{market}/{exchange}: {len(quotes)}/{total}', flush=True)
+    for market in EXCHANGES:
+        count = sum(r['market'] == market for r in rows.values())
+        if count < (1000 if market == 'KR' else 3000):
+            raise RuntimeError(f'{market}: unexpected small universe ({count}); do not replace snapshot')
+    snapshot = {'schemaVersion': 1, 'status': 'ready', 'collectedAt': datetime.now(timezone.utc).isoformat(),
+                'source': 'Yahoo Finance screener via yfinance', 'coverage': coverage,
+                'scope': 'Yahoo Finance 한국·미국 거래소 스크리너에 등록된 주식. ETF·펀드 제외. 거래소 공식 전체 상장 목록과 대조하지 않았으므로 모든 상장 종목 포함을 보장하지 않습니다.',
+                'stocks': sorted(rows.values(), key=lambda r: (r['market'], r['symbol']))}
+    dest = Path(os.environ.get('SNAPSHOT_PATH', 'stocks/data/market.json'))
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    temp = dest.with_suffix('.tmp')
+    temp.write_text(json.dumps(snapshot, ensure_ascii=False, allow_nan=False), encoding='utf-8')
+    temp.replace(dest)
+    print(f'Published {len(rows)} real stock records')
+
+
+if __name__ == '__main__':
+    main()
