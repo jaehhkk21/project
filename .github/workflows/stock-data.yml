@@ -43,12 +43,12 @@ jobs:
         with:
           script: |
             try {
-              await github.request('PATCH /repos/{owner}/{repo}/pages', {
+              await github.request('PUT /repos/{owner}/{repo}/pages', {
                 owner: context.repo.owner, repo: context.repo.repo, build_type: 'workflow'
               });
               core.notice('Pages deployment source is GitHub Actions.');
             } catch (error) {
-              if (error.status !== 403) throw error;
+              if (![403, 404].includes(error.status)) throw error;
               core.warning('Pages source could not be changed automatically. Set Settings > Pages > Source to GitHub Actions to prevent legacy branch builds from overwriting data.');
             }
       - uses: actions/configure-pages@v5
