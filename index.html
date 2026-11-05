@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f5f0">
+  <title>LUCKY SIX — 오늘의 행운을 뽑다</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="site-shell">
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="Lucky Six 홈"><span class="brand-symbol">✳</span> LUCKY SIX<span class="brand-dot">®</span></a>
+      <span class="header-tag">작은 기대, 기분 좋은 시작</span>
+      <span class="header-edition">LOTTO 6/45 <i></i></span>
+    </header>
+
+    <main>
+      <section class="intro">
+        <div class="eyebrow"><span></span> A LITTLE LUCK FOR YOUR DAY</div>
+        <h1>오늘의 행운은,<br>어떤 <span>숫자</span>일까요<span class="title-period">?</span></h1>
+        <p>45개의 숫자, 6개의 작은 가능성.<br>당신만의 행운의 조합을 만나보세요.</p>
+        <div class="intro-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="art-ball art-ball-big">6<span>LUCKY</span></div><div class="art-ball art-ball-small">45</div><span class="spark spark-one">✦</span><span class="spark spark-two">✳</span><span class="art-label">MAKE ROOM<br>FOR A LITTLE LUCK.</span></div>
+      </section>
+
+      <section class="generator" aria-labelledby="draw-title">
+        <div class="panel-heading"><div><span class="section-kicker">YOUR LUCKY COMBINATION</span><h2 id="draw-title">행운의 번호 뽑기 <span>✧</span></h2></div><span class="small-badge">1–45 · 중복 없이 6개</span></div>
+        <div id="results" class="results" aria-live="polite" aria-busy="false"></div>
+        <div class="controls"><div class="game-count"><span>몇 게임 뽑을까요?</span><div class="stepper"><button id="decrease" aria-label="게임 수 줄이기">−</button><output id="count">1</output><button id="increase" aria-label="게임 수 늘리기">+</button></div></div><button id="draw" class="draw-button"><span>✳</span><span id="draw-label">행운의 번호 뽑기</span><span class="button-arrow">↗</span></button></div>
+        <div class="panel-note"><span>↻ 매번 새로운 무작위 조합</span><span>최대 5게임까지 한 번에</span></div>
+      </section>
+
+      <section class="lower-grid">
+        <div class="lock-panel"><button id="lock-toggle" class="lock-heading" aria-expanded="false" aria-controls="lock-content"><span><span class="line-icon">⌑</span> 나만의 숫자 넣기 <small>선택</small></span><span id="lock-chevron">+</span></button><p class="lock-description">좋아하는 숫자가 있다면, 행운에 살짝 더해보세요.</p><div id="lock-content" hidden><div class="lock-info"><span>고정할 번호를 선택하세요</span><span id="lock-count">0 / 6</span></div><div id="number-grid" class="number-grid"></div><button id="clear-locks" class="text-button">선택 초기화</button></div><div id="locked-preview" class="locked-preview"></div></div>
+        <div class="tip-panel"><span class="tip-star">✦</span><div><span class="section-kicker">A FRIENDLY REMINDER</span><h3>행운은 가볍게, 기대는 즐겁게.</h3><p>모든 번호 조합의 당첨 확률은 같아요.<br>이 번호는 예측이 아닌, 당신을 위한 무작위 선물이에요.</p></div></div>
+      </section>
+
+      <section class="history-section" aria-labelledby="history-title"><div class="history-heading"><h2 id="history-title">나의 추첨 기록 <span id="history-count">0</span></h2><button id="clear-history" class="text-button">기록 비우기 <span>↗</span></button></div><div id="history"></div></section>
+      <div id="toast" class="toast" role="status"></div>
+    </main>
+    <footer><span class="footer-brand">✳ LUCKY SIX</span><p>우연이 만드는 작은 즐거움. 오늘도 좋은 하루 보내세요.</p><span>JUST FOR FUN. ALWAYS.</span></footer>
+  </div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
