@@ -61,7 +61,7 @@ jobs:
                   assert data['status'] == 'ready' and len(data['stocks']) > 4000
                   assert data['quality']['KR']['eligible'] > 0 and data['quality']['US']['eligible'] > 0
                   assert (datetime.now(timezone.utc) - datetime.fromisoformat(data['collectedAt'])).total_seconds() < 3600
-                  for path, marker in [('index.html', 'id="recommend"'), ('app.js?v=2', 'validateSnapshot')]:
+                  for path, marker in [('index.html', 'id="recommend"'), ('app.js?v=3', 'validateSnapshot')]:
                       with urllib.request.urlopen(base + path, timeout=30) as response:
                           assert marker in response.read().decode()
                   print('Published site verified:', len(data['stocks']), 'real stocks', data['quality'])

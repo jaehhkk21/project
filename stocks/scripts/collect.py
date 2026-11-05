@@ -26,10 +26,18 @@ def normalize(q, market):
     pe = number(q.get('trailingPE'))
     if pe is None and price is not None and eps and eps > 0:
         pe = price / eps
+    pe_basis = 'TTM' if pe is not None and pe > 0 else None
+    if pe is None:
+        estimate = number(q.get('priceEpsCurrentYear'))
+        eps_estimate = number(q.get('epsCurrentYear'))
+        if estimate is None and price is not None and eps_estimate and eps_estimate > 0:
+            estimate = price / eps_estimate
+        if estimate is not None and estimate > 0:
+            pe, pe_basis = estimate, 'FY_ESTIMATE'
     return {'symbol': symbol, 'name': q.get('longName') or q.get('shortName') or symbol,
             'market': market, 'exchange': q.get('exchange', ''),
             'sector': q.get('sector') or q.get('sectorDisp') or '미제공',
-            'price': price, 'currency': q.get('currency'), 'pe': pe,
+            'price': price, 'currency': q.get('currency'), 'pe': pe, 'peBasis': pe_basis,
             'low52': number(q.get('fiftyTwoWeekLow')), 'high52': number(q.get('fiftyTwoWeekHigh')),
             'volume': number(q.get('averageDailyVolume3Month')),
             'priceTime': number(q.get('regularMarketTime')),
@@ -111,6 +119,7 @@ def main():
             handle.write('## Real market snapshot\n\n| Market | Collected equities | Rankable equities |\n|---|---:|---:|\n')
             for market, counts in quality.items():
                 handle.write(f"| {market} | {counts['collected']} | {counts['eligible']} |\n")
+            print('::notice title=Real stock counts::' + json.dumps(quality), flush=True)
             handle.write('\nEvery provider-reported exchange page was collected. The universe is provider-defined, not independently reconciled to official listing rosters.\n')
     snapshot = {'schemaVersion': 1, 'status': 'ready', 'collectedAt': datetime.now(timezone.utc).isoformat(),
                 'source': 'Yahoo Finance screener via yfinance', 'coverage': coverage, 'quality': quality,

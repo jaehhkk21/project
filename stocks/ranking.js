@@ -13,7 +13,7 @@ export function validateSnapshot(data, now=Date.now()) {
 export function eligible(s, now=Date.now()) {
   return ['price','pe','low52','high52','volume','priceTime'].every(k=>Number.isFinite(s[k])) && s.price>0 && s.pe>0 && s.volume>0 && s.low52>0 && s.high52>s.low52 && s.priceTime*1000<=now+300000 && now-s.priceTime*1000<=7*DAY;
 }
-export function rankStocks(stocks,{market='ALL',sector='ALL',query='',style='balanced',now=Date.now()}={}) {
+export function rankStocks(stocks,{market='ALL',sector='ALL',query='',style='balanced',peMode='all',now=Date.now()}={}) {
   const weights={balanced:[.4,.4,.2],value:[.65,.2,.15],trend:[.2,.65,.15]}[style]||[.4,.4,.2];
   const valid=stocks.filter(s=>eligible(s,now));
   const volumes={};
@@ -22,5 +22,5 @@ export function rankStocks(stocks,{market='ALL',sector='ALL',query='',style='bal
   return valid.map(s=>{
     const value=100/(1+s.pe/20),position=Math.min(100,Math.max(0,100*(s.price-s.low52)/(s.high52-s.low52))),liquidity=percentile(volumes[s.market],s.volume);
     return {...s,position,components:{value,position,liquidity},score:Math.round(value*weights[0]+position*weights[1]+liquidity*weights[2])};
-  }).filter(s=>(market==='ALL'||s.market===market)&&(sector==='ALL'||s.sector===sector)&&`${s.name} ${s.symbol}`.toLowerCase().includes(query.trim().toLowerCase())).sort((a,b)=>b.score-a.score||a.symbol.localeCompare(b.symbol));
+  }).filter(s=>(peMode!=='ttm'||s.peBasis==='TTM')&&(market==='ALL'||s.market===market)&&(sector==='ALL'||s.sector===sector)&&`${s.name} ${s.symbol}`.toLowerCase().includes(query.trim().toLowerCase())).sort((a,b)=>b.score-a.score||a.symbol.localeCompare(b.symbol));
 }

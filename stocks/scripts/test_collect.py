@@ -9,6 +9,13 @@ class CollectionTests(unittest.TestCase):
         self.assertIsNone(normalize({'symbol':'A','trailingPE':float('nan')},'US')['pe'])
         self.assertIsNone(normalize({'symbol':'ETF','quoteType':'ETF'},'US'))
 
+    def test_estimates_are_explicit_and_do_not_hide_known_negative_pe(self):
+        row = normalize({'symbol':'005930.KS','regularMarketPrice':100,'priceEpsCurrentYear':5},'KR')
+        self.assertEqual(row['pe'],5)
+        self.assertEqual(row['peBasis'],'FY_ESTIMATE')
+        self.assertEqual(normalize({'symbol':'A','trailingPE':10},'US')['peBasis'],'TTM')
+        self.assertEqual(normalize({'symbol':'B','trailingPE':-5,'priceEpsCurrentYear':5},'US')['pe'],-5)
+
     def test_paginates_entire_reported_universe(self):
         def fetch(q, offset, **kwargs):
             return {'total': 251, 'quotes': [{'symbol':str(i)} for i in range(offset,min(offset+250,251))]}

@@ -8,7 +8,7 @@ The browser's recommendation button fetches `data/market.json` and ranks the ful
 This is Yahoo's indexed universe, not an independently verified complete official exchange roster. It includes provider-supported US OTC exchanges. ETFs/funds are excluded; missing/unprofitable/stale stocks remain in the universe count but are excluded from ranking. Provider rate limits, pagination limits, universe changes, or unsupported exchanges fail the collection rather than silently truncating it. The source's delayed prices and fundamentals are not real-time data or investment advice. Verify provider terms before redistribution or commercial use.
 
 ## Scoring
-Eligible rows require positive trailing P/E, price and 3-month average share volume, a valid 52-week price range and a price timestamp no more than seven days old. Value = 100/(1+PE/20); trend = normalized position within 52-week low/high (clipped to 0–100); liquidity = within-market volume percentile. Balanced weights: 40/40/20; value 65/20/15; trend 20/65/15. News, AI, growth forecasts, commissions and industry valuation differences are not included.
+Eligible rows require positive trailing P/E (or current-fiscal-year estimate P/E only when trailing P/E is absent; explicitly labelled and optionally excluded by the user), price and 3-month average share volume, a valid 52-week price range and a price timestamp no more than seven days old. Value = 100/(1+PE/20); trend = normalized position within 52-week low/high (clipped to 0–100); liquidity = within-market volume percentile. Balanced weights: 40/40/20; value 65/20/15; trend 20/65/15. News, AI-generated forecasts, commissions and industry valuation differences are not included.
 
 ## Validation
 ```
