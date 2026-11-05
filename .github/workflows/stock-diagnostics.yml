@@ -1,4 +1,4 @@
-name: Inspect published stock data fields
+name: Inspect provider stock data fields
 on:
   push:
     branches: [main]
@@ -9,18 +9,17 @@ jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install yfinance==0.2.66
       - name: Inspect public provider fields without credentials
         run: |
           python - <<'PY'
-          import urllib.request, json, os, time
-          url = 'https://jaehhkk21.github.io/project/stocks/data/market.json?t=' + str(time.time())
-          with urllib.request.urlopen(url, timeout=30) as response:
-              data = json.load(response)
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
-              out.write('## Public data field diagnosis\n\n')
-              out.write('Collected at: ' + str(data.get('collectedAt')) + '\n\n')
-              for market in ['KR', 'US']:
-                  rows = [s for s in data['stocks'] if s['market'] == market]
-                  presence = {k: sum(s.get(k) is not None for s in rows) for k in ['price','pe','low52','high52','volume','priceTime']}
-                  out.write('### ' + market + '\n\n```json\n' + json.dumps({'count':len(rows),'presence':presence,'examples':rows[:2]},ensure_ascii=False) + '\n```\n')
+          import json, yfinance as yf
+          for region, exchange in [('kr','KSC'),('us','NMS')]:
+              q = yf.EquityQuery('and',[yf.EquityQuery('eq',['region',region]),yf.EquityQuery('eq',['exchange',exchange])])
+              data = yf.screen(q,size=2,sortField='intradaymarketcap',sortAsc=False)
+              for row in data['quotes'][:1]:
+                  print('::notice title=Provider fields::'+json.dumps({'market':region,'row':row},ensure_ascii=True))
           PY
