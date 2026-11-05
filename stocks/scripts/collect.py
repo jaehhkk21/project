@@ -77,7 +77,14 @@ def collect_exchange(screen, query_class, market, exchange, pause=time.sleep):
 def main():
     import yfinance as yf
     rows, coverage = {}, []
-    for market, exchanges in EXCHANGES.items():
+    # Read the exchange universe from the installed provider version, never
+    # mix hardcoded exchange codes from a different yfinance release.
+    from yfinance.const import EQUITY_SCREENER_EQ_MAP
+    exchange_map = EQUITY_SCREENER_EQ_MAP['exchange']
+    for market in EXCHANGES:
+        exchanges = sorted(exchange_map[market.lower()])
+        if not exchanges:
+            raise RuntimeError(f'{market}: no provider exchanges configured')
         for exchange in exchanges:
             quotes, total = collect_exchange(yf.screen, yf.EquityQuery, market, exchange)
             for q in quotes:
