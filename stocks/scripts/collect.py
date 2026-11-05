@@ -103,4 +103,15 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as exc:
+        import html
+        # Public provider diagnostics only; this job uses no financial API secrets.
+        message = f'{type(exc).__name__}: {str(exc)[:600]}'.replace('\n', ' ')
+        print(f'::error title=Stock collection failed::{message}', flush=True)
+        summary = os.environ.get('GITHUB_STEP_SUMMARY')
+        if summary:
+            with open(summary, 'a') as handle:
+                handle.write('## Stock collection failed\n\n' + html.escape(message) + '\n')
+        raise
