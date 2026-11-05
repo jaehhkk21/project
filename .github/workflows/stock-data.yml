@@ -2,7 +2,6 @@ name: Refresh stock universe and deploy Pages
 on:
   push:
     branches: [main]
-    paths: ['stocks/**', '.github/workflows/stock-data.yml']
   schedule:
     - cron: '35 22 * * 1-5'
   workflow_dispatch:
@@ -12,7 +11,7 @@ permissions:
   id-token: write
 concurrency:
   group: stock-pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   refresh:
     runs-on: ubuntu-latest
@@ -39,6 +38,19 @@ jobs:
           cp index.html style.css app.js lottery.js _site/
           cp stocks/index.html stocks/style.css stocks/app.js stocks/ranking.js _site/stocks/
           cp stocks/data/market.json _site/stocks/data/
+      - name: Use Actions as the single Pages deployment source
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.request('PATCH /repos/{owner}/{repo}/pages', {
+                owner: context.repo.owner, repo: context.repo.repo, build_type: 'workflow'
+              });
+              core.notice('Pages deployment source is GitHub Actions.');
+            } catch (error) {
+              if (error.status !== 403) throw error;
+              core.warning('Pages source could not be changed automatically. Set Settings > Pages > Source to GitHub Actions to prevent legacy branch builds from overwriting data.');
+            }
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
